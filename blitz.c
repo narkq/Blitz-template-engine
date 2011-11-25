@@ -170,6 +170,8 @@ PHP_INI_BEGIN()
         OnUpdateString, charset, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.scope_lookup_limit", "0", PHP_INI_ALL,
         OnUpdateLongLegacy, scope_lookup_limit, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.strict_mode", "0", PHP_INI_ALL,
+        OnUpdateBool, strict_mode, zend_blitz_globals, blitz_globals)
 
 PHP_INI_END()
 /* }}} */
@@ -626,6 +628,7 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->tag_comment_open = BLITZ_TAG_COMMENT_OPEN;
     blitz_globals->tag_comment_close = BLITZ_TAG_COMMENT_CLOSE;
     blitz_globals->scope_lookup_limit = 0;
+    blitz_globals->strict_mode = 0;
 }
 /* }}} */
 
@@ -2248,6 +2251,10 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                     }
                 } else if (Z_TYPE_PP(*zparam) == IS_OBJECT) {
                     if (SUCCESS != zend_hash_find(Z_OBJPROP_PP(*zparam), key, key_len + 1, (void **) zparam)) {
+                        if (BLITZ_G(strict_mode))
+                        {
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "strict_mode restrictions in effect: tried to access non-existent property (\"%s\") of an object", key);
+                        }
                         return 0;
                     }
                 } else {
@@ -2988,6 +2995,11 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                         result, result_len, result_alloc_len, &n_jump TSRMLS_CC);
                 } else {
                     zval *iteration_params = parent_params ? parent_params : NULL;
+                    if (BLITZ_G(strict_mode))
+                    {
+                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "strict_mode restrictions in effect: function calls are forbidden");
+                        return 0;
+                    }
                     if (BLITZ_IS_PREDEF_METHOD(node->type)) {
                         blitz_exec_predefined_method(
                             tpl, node, iteration_params, id,

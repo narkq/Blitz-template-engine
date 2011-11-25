@@ -60,6 +60,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char check_recursion;
     char *charset;
     unsigned long scope_lookup_limit;
+    char strict_mode;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS
