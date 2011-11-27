@@ -54,7 +54,7 @@
 #include "php_blitz.h"
 
 #define BLITZ_DEBUG 0 
-#define BLITZ_VERSION_STRING "0.7.1.10-dev"
+#define BLITZ_VERSION_STRING "0.7.1.10.1-dev"
 
 ZEND_DECLARE_MODULE_GLOBALS(blitz)
 
