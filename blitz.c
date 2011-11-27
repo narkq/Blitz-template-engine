@@ -3033,8 +3033,10 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                         {
                             php_error_docref(NULL TSRMLS_CC, E_WARNING,
                                     "disable_user_func_call restrictions in effect: user function calls are forbidden"
-                                    " (in \"%s\"), tag was ignored",
-                                    tpl->static_data.name
+                                    " (in \"%s\" at line %lu, pos %lu), key was ignored",
+                                    tpl->static_data.name,
+                                    get_line_number(tpl->static_data.body, node->pos_begin),
+                                    get_line_pos(tpl->static_data.body, node->pos_begin)
                             );
                         } else {
                             blitz_exec_user_method(
