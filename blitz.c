@@ -170,10 +170,12 @@ PHP_INI_BEGIN()
         OnUpdateString, charset, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.scope_lookup_limit", "0", PHP_INI_ALL,
         OnUpdateLongLegacy, scope_lookup_limit, zend_blitz_globals, blitz_globals)
-    STD_PHP_INI_ENTRY("blitz.strict_mode", "0", PHP_INI_ALL,
-        OnUpdateBool, strict_mode, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.disable_non_existent_property_access", "0", PHP_INI_ALL,
         OnUpdateBool, disable_non_existent_property_access, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.disable_wrapper_func_call", "0", PHP_INI_ALL,
+        OnUpdateBool, disable_wrapper_func_call, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.disable_user_func_call", "0", PHP_INI_ALL,
+        OnUpdateBool, disable_user_func_call, zend_blitz_globals, blitz_globals)
 
 PHP_INI_END()
 /* }}} */
@@ -630,8 +632,9 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->tag_comment_open = BLITZ_TAG_COMMENT_OPEN;
     blitz_globals->tag_comment_close = BLITZ_TAG_COMMENT_CLOSE;
     blitz_globals->scope_lookup_limit = 0;
-    blitz_globals->strict_mode = 0;
     blitz_globals->disable_non_existent_property_access = 0;
+    blitz_globals->disable_wrapper_func_call = 0;
+    blitz_globals->disable_user_func_call = 0;
 }
 /* }}} */
 
@@ -2481,6 +2484,12 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
             }
         }
 
+        if (BLITZ_G(disable_wrapper_func_call))
+        {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_wrapper_func_call restrictions in effect: wrapper function calls are forbidden");
+            return 0;
+        }
+
         if (blitz_exec_wrapper(&str, &str_len, node->type, wrapper_args_num, wrapper_args, wrapper_args_len, tmp_buf TSRMLS_CC)) {
             BLITZ_REALLOC_RESULT(str_len, new_len, *result_len, *result_alloc_len, *result, *p_result);
             *p_result = (char*)memcpy(*p_result, str, str_len);
@@ -2998,17 +3007,17 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                         result, result_len, result_alloc_len, &n_jump TSRMLS_CC);
                 } else {
                     zval *iteration_params = parent_params ? parent_params : NULL;
-                    if (BLITZ_G(strict_mode))
-                    {
-                        php_error_docref(NULL TSRMLS_CC, E_WARNING, "strict_mode restrictions in effect: function calls are forbidden");
-                        return 0;
-                    }
                     if (BLITZ_IS_PREDEF_METHOD(node->type)) {
                         blitz_exec_predefined_method(
                             tpl, node, iteration_params, id,
                             result, &p_result, result_len, result_alloc_len, tpl->tmp_buf TSRMLS_CC
                         );
                     } else {
+                        if (BLITZ_G(disable_user_func_call))
+                        {
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_user_func_call restrictions in effect: user function calls are forbidden");
+                            return 0;
+                        }
                         blitz_exec_user_method(
                             tpl, node, &iteration_params, id,
                             result, &p_result, result_len, result_alloc_len TSRMLS_CC
