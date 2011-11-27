@@ -2529,6 +2529,12 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
     zend_function *func = NULL;
     HashTable *function_table = NULL;
    
+    if (BLITZ_G(disable_user_func_call))
+    {
+        php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_user_func_call restrictions in effect: user function calls are forbidden");
+        return 0;
+    }
+
     MAKE_STD_ZVAL(zmethod);
     ZVAL_STRING(zmethod, node->lexem, 1);
 
@@ -3016,11 +3022,6 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                             result, &p_result, result_len, result_alloc_len, tpl->tmp_buf TSRMLS_CC
                         );
                     } else {
-                        if (BLITZ_G(disable_user_func_call))
-                        {
-                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_user_func_call restrictions in effect: user function calls are forbidden");
-                            return 0;
-                        }
                         blitz_exec_user_method(
                             tpl, node, &iteration_params, id,
                             result, &p_result, result_len, result_alloc_len TSRMLS_CC
