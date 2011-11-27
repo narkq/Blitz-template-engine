@@ -2262,7 +2262,13 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                     if (SUCCESS != zend_hash_find(Z_OBJPROP_PP(*zparam), key, key_len + 1, (void **) zparam)) {
                         if (BLITZ_G(disable_non_existent_property_access))
                         {
-                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "tried to access non-existent property of an object (\"%s\")", lexem);
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING,
+                                    "tried to access non-existent property of an object "
+                                    /*"(in \"%s\" at context %s, line %lu, pos %lu), key was ignored",*/
+                                    /*node->args[0].name,*/
+                                    /*get_line_number(tpl->static_data.body, node->pos_begin),*/
+                                    /*get_line_pos(tpl->static_data.body, node->pos_begin)*/
+                            );
                         }
                         return 0;
                     }
@@ -2489,7 +2495,14 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
 
         if (BLITZ_G(disable_wrapper_func_call))
         {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_wrapper_func_call restrictions in effect: wrapper function calls are forbidden");
+            php_error_docref(NULL TSRMLS_CC, E_WARNING,
+                    "disable_wrapper_func_call restrictions in effect: wrapper function calls are forbidden"
+                    " (in \"%s\" at context %s, line %lu, pos %lu), key was ignored",
+                    tpl->static_data.name,
+                    node->args[0].name,
+                    get_line_number(tpl->static_data.body, node->pos_begin),
+                    get_line_pos(tpl->static_data.body, node->pos_begin)
+            );
             return 0;
         }
 
