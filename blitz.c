@@ -2265,6 +2265,7 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                             php_error_docref(NULL TSRMLS_CC, E_WARNING,
                                     "tried to access non-existent property of an object "
                                     "(in \"%s\" line %lu, pos %lu), key was ignored",
+                                    tpl->static_data.name,
                                     get_line_number(tpl->static_data.body, node->pos_begin),
                                     get_line_pos(tpl->static_data.body, node->pos_begin)
                             );
