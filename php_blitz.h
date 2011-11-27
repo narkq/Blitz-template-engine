@@ -60,7 +60,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char check_recursion;
     char *charset;
     unsigned long scope_lookup_limit;
-    char disable_non_existent_property_access;
+    char warn_missing_property_access;
     char disable_wrapper_func_call;
     char disable_user_func_call;
     char treat_nobracket_functions_as_vars;

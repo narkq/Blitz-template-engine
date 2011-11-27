@@ -170,8 +170,8 @@ PHP_INI_BEGIN()
         OnUpdateString, charset, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.scope_lookup_limit", "0", PHP_INI_ALL,
         OnUpdateLongLegacy, scope_lookup_limit, zend_blitz_globals, blitz_globals)
-    STD_PHP_INI_ENTRY("blitz.disable_non_existent_property_access", "0", PHP_INI_ALL,
-        OnUpdateBool, disable_non_existent_property_access, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.warn_missing_property_access", "0", PHP_INI_ALL,
+        OnUpdateBool, warn_missing_property_access, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.disable_wrapper_func_call", "0", PHP_INI_ALL,
         OnUpdateBool, disable_wrapper_func_call, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.disable_user_func_call", "0", PHP_INI_ALL,
@@ -634,7 +634,7 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->tag_comment_open = BLITZ_TAG_COMMENT_OPEN;
     blitz_globals->tag_comment_close = BLITZ_TAG_COMMENT_CLOSE;
     blitz_globals->scope_lookup_limit = 0;
-    blitz_globals->disable_non_existent_property_access = 0;
+    blitz_globals->warn_missing_property_access = 0;
     blitz_globals->disable_wrapper_func_call = 0;
     blitz_globals->disable_user_func_call = 0;
     blitz_globals->treat_nobracket_functions_as_vars = 1;
@@ -2260,10 +2260,10 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                     }
                 } else if (Z_TYPE_PP(*zparam) == IS_OBJECT) {
                     if (SUCCESS != zend_hash_find(Z_OBJPROP_PP(*zparam), key, key_len + 1, (void **) zparam)) {
-                        if (BLITZ_G(disable_non_existent_property_access))
+                        if (BLITZ_G(warn_missing_property_access))
                         {
                             php_error_docref(NULL TSRMLS_CC, E_WARNING,
-                                    "tried to access non-existent property of an object "
+                                    "tried to access missing property of an object "
                                     "(in \"%s\" line %lu, pos %lu), key was ignored",
                                     tpl->static_data.name,
                                     get_line_number(tpl->static_data.body, node->pos_begin),
