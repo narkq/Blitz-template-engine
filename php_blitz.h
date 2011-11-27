@@ -61,6 +61,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char *charset;
     unsigned long scope_lookup_limit;
     char strict_mode;
+    char disable_non_existent_property_access;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS

@@ -172,6 +172,8 @@ PHP_INI_BEGIN()
         OnUpdateLongLegacy, scope_lookup_limit, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.strict_mode", "0", PHP_INI_ALL,
         OnUpdateBool, strict_mode, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.disable_non_existent_property_access", "0", PHP_INI_ALL,
+        OnUpdateBool, disable_non_existent_property_access, zend_blitz_globals, blitz_globals)
 
 PHP_INI_END()
 /* }}} */
@@ -629,6 +631,7 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->tag_comment_close = BLITZ_TAG_COMMENT_CLOSE;
     blitz_globals->scope_lookup_limit = 0;
     blitz_globals->strict_mode = 0;
+    blitz_globals->disable_non_existent_property_access = 0;
 }
 /* }}} */
 
@@ -2251,9 +2254,9 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                     }
                 } else if (Z_TYPE_PP(*zparam) == IS_OBJECT) {
                     if (SUCCESS != zend_hash_find(Z_OBJPROP_PP(*zparam), key, key_len + 1, (void **) zparam)) {
-                        if (BLITZ_G(strict_mode))
+                        if (BLITZ_G(disable_non_existent_property_access))
                         {
-                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "strict_mode restrictions in effect: tried to access non-existent property (\"%s\") of an object", key);
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING, "tried to access non-existent property of an object (\"%s\")", lexem);
                         }
                         return 0;
                     }
