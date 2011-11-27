@@ -2205,7 +2205,7 @@ static inline blitz_scope_stack_find(blitz_tpl *tpl, char *key, unsigned long ke
 }
 /* }}} */
 
-static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int lexem_len, zval *params, blitz_tpl *tpl TSRMLS_DC) /* {{{ */
+static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int lexem_len, zval *params, blitz_tpl *tpl, blitz_node *node TSRMLS_DC) /* {{{ */
 {
     register int i = 0, j = 0, last_pos = 0, key_len = 0, is_last = 0;
     char key[256];
@@ -2264,10 +2264,9 @@ static inline int blitz_fetch_var_by_path(zval ***zparam, const char *lexem, int
                         {
                             php_error_docref(NULL TSRMLS_CC, E_WARNING,
                                     "tried to access non-existent property of an object "
-                                    /*"(in \"%s\" at context %s, line %lu, pos %lu), key was ignored",*/
-                                    /*node->args[0].name,*/
-                                    /*get_line_number(tpl->static_data.body, node->pos_begin),*/
-                                    /*get_line_pos(tpl->static_data.body, node->pos_begin)*/
+                                    "(in \"%s\" line %lu, pos %lu), key was ignored",
+                                    get_line_number(tpl->static_data.body, node->pos_begin),
+                                    get_line_pos(tpl->static_data.body, node->pos_begin)
                             );
                         }
                         return 0;
@@ -2324,7 +2323,7 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
                 }
             }
         } else if (arg->type == BLITZ_ARG_TYPE_VAR_PATH) {
-            if (blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl TSRMLS_CC)) {
+            if (blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl, node TSRMLS_CC)) {
                 BLITZ_ZVAL_NOT_EMPTY(z, not_empty);
             }
         } else if (arg->type == BLITZ_ARG_TYPE_BOOL) {
@@ -2381,7 +2380,7 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
                     is_found = 1;
                 }
                 else if (is_var_path 
-                    && blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl TSRMLS_CC))
+                    && blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl, node TSRMLS_CC))
                 {
                     is_found = 1;
                 }
@@ -2427,7 +2426,7 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
                     found = 1;
                 }
             } else if (arg_type == BLITZ_ARG_TYPE_VAR_PATH) {
-                if (blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl TSRMLS_CC)) {
+                if (blitz_fetch_var_by_path(&z, arg->name, arg->len, iteration_params, tpl, node TSRMLS_CC)) {
                     found = 1;
                 }
             }
@@ -2481,7 +2480,7 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
                         wrapper_args_len[i] = Z_STRLEN_PP(z);
                     }
                 } else if (p_arg->type == BLITZ_ARG_TYPE_VAR_PATH) {
-                    if (blitz_fetch_var_by_path(&z, p_arg->name, p_arg->len, iteration_params, tpl TSRMLS_CC)) {
+                    if (blitz_fetch_var_by_path(&z, p_arg->name, p_arg->len, iteration_params, tpl, node TSRMLS_CC)) {
                         convert_to_string_ex(z);
                         wrapper_args[i] = Z_STRVAL_PP(z);
                         wrapper_args_len[i] = Z_STRLEN_PP(z);
@@ -2573,7 +2572,7 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
                     }
                 }
             } else if (i_arg_type == BLITZ_ARG_TYPE_VAR_PATH) {
-                if (has_iterations && blitz_fetch_var_by_path(&ztmp, i_arg->name, i_arg->len, *iteration_params, tpl TSRMLS_CC)) {
+                if (has_iterations && blitz_fetch_var_by_path(&ztmp, i_arg->name, i_arg->len, *iteration_params, tpl, node TSRMLS_CC)) {
                     args[i] = ztmp;
                 }
             } else if (i_arg_type == BLITZ_ARG_TYPE_NUM) {
@@ -2712,7 +2711,7 @@ static inline void blitz_exec_var(blitz_tpl *tpl, const char *lexem, zval *param
 /* }}} */
 
 /* {{{ int blitz_exec_var_path() */
-static inline void blitz_exec_var_path(blitz_tpl *tpl, const char *lexem, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
+static inline void blitz_exec_var_path(blitz_tpl *tpl, blitz_node *node, const char *lexem, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
 {
     /* FIXME: there should be just node->lexem_len+1, but method.phpt test becomes broken. REMOVE STRLEN! */
     unsigned int lexem_len = strlen(lexem);
@@ -2720,7 +2719,7 @@ static inline void blitz_exec_var_path(blitz_tpl *tpl, const char *lexem, zval *
     char *p_result = *result;
     zval **elem = NULL;
 
-    if (!blitz_fetch_var_by_path(&elem, lexem, lexem_len, params, tpl TSRMLS_CC))
+    if (!blitz_fetch_var_by_path(&elem, lexem, lexem_len, params, tpl, node TSRMLS_CC))
         return;
 
     if (!elem)
@@ -2890,7 +2889,7 @@ static void blitz_exec_if_context(blitz_tpl *tpl, unsigned long node_id, zval *p
                     }
                 }
             } else if (arg->type == BLITZ_ARG_TYPE_VAR_PATH) {
-                if (blitz_fetch_var_by_path(&z, arg->name, arg->len, parent_params, tpl TSRMLS_CC)) {
+                if (blitz_fetch_var_by_path(&z, arg->name, arg->len, parent_params, tpl, node TSRMLS_CC)) {
                     BLITZ_ZVAL_NOT_EMPTY(z, not_empty);
                 }
             } else if (arg->type == BLITZ_ARG_TYPE_BOOL) {
@@ -3011,7 +3010,7 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
             if (node->type == BLITZ_NODE_TYPE_VAR) { 
                 blitz_exec_var(tpl, node->lexem, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
             } else if (node->type == BLITZ_NODE_TYPE_VAR_PATH) {
-                blitz_exec_var_path(tpl, node->lexem, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
+                blitz_exec_var_path(tpl, node, node->lexem, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
             } else if (BLITZ_IS_METHOD(node->type)) {
                 if (node->type == BLITZ_NODE_TYPE_CONTEXT) {
                     BLITZ_LOOP_MOVE_FORWARD(tpl);
