@@ -176,6 +176,8 @@ PHP_INI_BEGIN()
         OnUpdateBool, disable_wrapper_func_call, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.disable_user_func_call", "0", PHP_INI_ALL,
         OnUpdateBool, disable_user_func_call, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.treat_nobracket_functions_as_vars", "1", PHP_INI_ALL,
+        OnUpdateBool, treat_nobracket_functions_as_vars, zend_blitz_globals, blitz_globals)
 
 PHP_INI_END()
 /* }}} */
@@ -635,6 +637,7 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->disable_non_existent_property_access = 0;
     blitz_globals->disable_wrapper_func_call = 0;
     blitz_globals->disable_user_func_call = 0;
+    blitz_globals->treat_nobracket_functions_as_vars = 1;
 }
 /* }}} */
 
@@ -1170,7 +1173,7 @@ static inline void blitz_parse_call (char *text, unsigned int len_text, blitz_no
                     node->type = BLITZ_NODE_TYPE_END;
                 } else {
                     /* functions without brackets are treated as parameters */
-                    if (BLITZ_NOBRAKET_FUNCTIONS_ARE_VARS) {
+                    if (BLITZ_G(treat_nobracket_functions_as_vars)) {
                         node->type = is_path ? BLITZ_NODE_TYPE_VAR_PATH : BLITZ_NODE_TYPE_VAR;
                     } else { /* case insensitivity for methods */
                         zend_str_tolower(node->lexem, node->lexem_len);

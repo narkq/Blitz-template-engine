@@ -63,6 +63,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char disable_non_existent_property_access;
     char disable_wrapper_func_call;
     char disable_user_func_call;
+    char treat_nobracket_functions_as_vars;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS
@@ -122,7 +123,6 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_TAG_ID_COMMENT_CLOSE      5
 
 #define BLITZ_ALTERNATIVE_TAGS_ENABLED      1
-#define BLITZ_NOBRAKET_FUNCTIONS_ARE_VARS   1
 
 /* tag analizer states */
 #define BLITZ_ANALISER_STATE_LIST_LEN       7
