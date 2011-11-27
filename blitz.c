@@ -2541,19 +2541,6 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
     blitz_tpl *tpl_caller = NULL;
     zend_function *func = NULL;
     HashTable *function_table = NULL;
-   
-    if (BLITZ_G(disable_user_func_call))
-    {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING,
-                "disable_user_func_call restrictions in effect: user function calls are forbidden"
-                " (in \"%s\" at context %s, line %lu, pos %lu), key was ignored",
-                tpl->static_data.name,
-                node->args[0].name,
-                get_line_number(tpl->static_data.body, node->pos_begin),
-                get_line_pos(tpl->static_data.body, node->pos_begin)
-        );
-        return 0;
-    }
 
     MAKE_STD_ZVAL(zmethod);
     ZVAL_STRING(zmethod, node->lexem, 1);
@@ -3042,10 +3029,22 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                             result, &p_result, result_len, result_alloc_len, tpl->tmp_buf TSRMLS_CC
                         );
                     } else {
-                        blitz_exec_user_method(
-                            tpl, node, &iteration_params, id,
-                            result, &p_result, result_len, result_alloc_len TSRMLS_CC
-                        );
+                        if (BLITZ_G(disable_user_func_call))
+                        {
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING,
+                                    "disable_user_func_call restrictions in effect: user function calls are forbidden"
+                                    " (in \"%s\" at context %s, line %lu, pos %lu), key was ignored",
+                                    tpl->static_data.name,
+                                    node->args[0].name,
+                                    get_line_number(tpl->static_data.body, node->pos_begin),
+                                    get_line_pos(tpl->static_data.body, node->pos_begin)
+                            );
+                        } else {
+                            blitz_exec_user_method(
+                                tpl, node, &iteration_params, id,
+                                result, &p_result, result_len, result_alloc_len TSRMLS_CC
+                            );
+                        }
                     }
                 }
             }
