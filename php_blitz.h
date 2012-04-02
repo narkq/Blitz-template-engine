@@ -362,6 +362,8 @@ typedef struct _blitz_static_data {
     unsigned int tag_close_len;
     unsigned int tag_open_alt_len;
     unsigned int tag_close_alt_len;
+    unsigned int tag_open_comment_len;
+    unsigned int tag_close_comment_len;
 } blitz_static_data;
 
 #define BLITZ_ERROR_MAX_LEN     1024
