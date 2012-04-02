@@ -276,6 +276,8 @@ static blitz_tpl *blitz_init_tpl_base(HashTable *globals, zval *iterations, blit
     static_data->tag_close_len = strlen(BLITZ_G(tag_close));
     static_data->tag_open_alt_len = strlen(BLITZ_G(tag_open_alt));
     static_data->tag_close_alt_len = strlen(BLITZ_G(tag_close_alt));
+    static_data->tag_open_comment_len = strlen(BLITZ_G(tag_comment_open));
+    static_data->tag_close_comment_len = strlen(BLITZ_G(tag_comment_close));
 
     tpl->loop_stack_level = 0;
 
@@ -504,8 +506,11 @@ static blitz_tpl *blitz_init_tpl(const char *filename, int filename_len,
     /* search algorithm requires lager buffer: body_len + add_buffer */
     static_data = & tpl->static_data;
     add_buffer_len = MAX(
-        MAX(static_data->tag_open_len, static_data->tag_close_len), 
-        MAX(static_data->tag_open_alt_len, static_data->tag_close_alt_len) 
+        MAX(
+            MAX(static_data->tag_open_len, static_data->tag_close_len),
+            MAX(static_data->tag_open_alt_len, static_data->tag_close_alt_len)
+        ),
+        MAX(static_data->tag_open_comment_len, static_data->tag_close_comment_len)
     );
 
     tpl->static_data.body = erealloc(tpl->static_data.body, tpl->static_data.body_len + add_buffer_len);
@@ -529,8 +534,11 @@ static int blitz_load_body(blitz_tpl *tpl, const char *body, int body_len TSRMLS
 
     if (tpl->static_data.body_len) {
         add_buffer_len = MAX(
-            MAX(tpl->static_data.tag_open_len, tpl->static_data.tag_close_len),
-            MAX(tpl->static_data.tag_open_alt_len, tpl->static_data.tag_close_alt_len)
+            MAX(
+                MAX(tpl->static_data.tag_open_len, tpl->static_data.tag_close_len),
+                MAX(tpl->static_data.tag_open_alt_len, tpl->static_data.tag_close_alt_len)
+            ),
+            MAX(tpl->static_data.tag_open_comment_len, tpl->static_data.tag_close_comment_len)
         );
 
         tpl->static_data.body = emalloc(tpl->static_data.body_len + add_buffer_len);
@@ -1561,6 +1569,7 @@ static inline int blitz_analizer_add(analizer_ctx *ctx TSRMLS_DC) {
     blitz_node *i_node = NULL;
     unsigned int n_nodes = 0;
     unsigned char is_alt_tag = 0;
+    unsigned char is_comment_tag = 0;
     char *body = NULL;
     analizer_stack_elem *stack_head = NULL;
 
@@ -1571,9 +1580,13 @@ static inline int blitz_analizer_add(analizer_ctx *ctx TSRMLS_DC) {
     current_open = ctx->pos_open;
 
     is_alt_tag = (tag->tag_id == BLITZ_TAG_ID_CLOSE_ALT) ? 1 : 0;
+    is_comment_tag = (tag->tag_id == BLITZ_TAG_ID_COMMENT_CLOSE) ? 1 : 0;
     if (is_alt_tag) { 
         open_len = tpl->static_data.tag_open_alt_len;
         close_len = tpl->static_data.tag_close_alt_len;
+    } else if (is_comment_tag) {
+        open_len = tpl->static_data.tag_open_comment_len;
+        close_len = tpl->static_data.tag_close_comment_len;
     } else {
         open_len = tpl->static_data.tag_open_len;
         close_len = tpl->static_data.tag_close_len;
