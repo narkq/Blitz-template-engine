@@ -1,9 +1,17 @@
 ===================================================================================================
+0.8.1 version 4 june 2012. Finally stable!
+===================================================================================================
+- FIX: parsing error fixed (incorrect code fragment breaks next correct one)
+- FIX: array-to-string conversion for variables doesn't add "Array" string to the output and shows 
+    human readable warning
+
+===================================================================================================
 0.7.2-devel
 ===================================================================================================
 - CHANGE: return last error with new getError() method
 - CHANGE: load returns FALSE if error occured
 - CHANGE: throw exceptions with warnings when blitz.throw_exceptions = 1 (0 by default) 
+- FIX: parsing error fixed (usually affected closing tags with spaces before it)
 - FIX: global warnings clean-up
 
 ===================================================================================================
