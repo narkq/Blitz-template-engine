@@ -1,4 +1,12 @@
 ===================================================================================================
+0.7.2-devel
+===================================================================================================
+- CHANGE: return last error with new getError() method
+- CHANGE: load returns FALSE if error occured
+- CHANGE: throw exceptions with warnings when blitz.throw_exceptions = 1 (0 by default) 
+- FIX: global warnings clean-up
+
+===================================================================================================
 0.7.1.16-devel 9 may 2012. С праздником, товарищи! Бей фашистскую сволочь.
 ===================================================================================================
 This is very first release with HTML output escaping. Please note that internal html extension was 

@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: php_blitz.h,v 1.23 2012/05/05 13:51:36 fisher Exp $ */
+/* $Id: php_blitz.h,v 1.24 2012/05/14 16:11:47 fisher Exp $ */
 
 #ifndef PHP_BLITZ_H
 #define PHP_BLITZ_H
@@ -64,6 +64,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     unsigned long scope_lookup_limit;
     char lower_case_method_names;
     char auto_escape;
+    char throw_exceptions;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS
@@ -206,12 +207,12 @@ ZEND_END_MODULE_GLOBALS(blitz)
 
 #define BLITZ_STRING_IS_ESCAPE(s, len)                                                              \
     (((1 == len) &&                                                                                 \
-        (('q' == s[0]) || ('Q' == s[0])) ||                                                         \
+        (('q' == s[0]) || ('Q' == s[0]))) ||                                                        \
     ((6 == len) &&                                                                                  \
         (('E' == s[0] && 'S' == s[1] && 'C' == s[2] && 'A' == s[3] && 'P' == s[4] && 'E' == s[5])   \
         ||                                                                                          \
         ('e' == s[0] && 's' == s[1] && 'c' == s[2] && 'a' == s[3] && 'p' == s[4] && 'e' == s[5]))   \
-    )))
+    ))
 
 #define BLITZ_STRING_IS_DATE(s, len)                                                        \
     ((4 == len) &&                                                                          \
@@ -222,17 +223,17 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_PHP_NAMESPACE_SHIFT   5
 #define BLITZ_STRING_PHP_NAMESPACE(s, len)                                                  \
     ((len >= 5) &&                                                                          \
-        (('P' == s[0]) && 'H' == s[1] && 'P' == s[2] && ':' == s[3] && ':' == s[4])         \
+        (('P' == s[0] && 'H' == s[1] && 'P' == s[2] && ':' == s[3] && ':' == s[4])          \
         ||                                                                                  \
-        (('p' == s[0]) && 'h' == s[1] && 'p' == s[2] && ':' == s[3] && ':' == s[4])         \
+        ('p' == s[0] && 'h' == s[1] && 'p' == s[2] && ':' == s[3] && ':' == s[4]))          \
     )
 
 #define BLITZ_THIS_NAMESPACE_SHIFT  6 
-#define BLITZ_STRING_THIS_NAMESPACE(s, len)                                                             \
-    ((len >= 6) &&                                                                                      \
-        (('T' == s[0]) && 'H' == s[1] && 'I' == s[2] && 'S' == s[3] && ':' == s[4] && ':' == s[5])      \
-        ||                                                                                              \
-        (('t' == s[0]) && 'h' == s[1] && 'i' == s[2] && 's' == s[3] && ':' == s[4] && ':' == s[5])      \
+#define BLITZ_STRING_THIS_NAMESPACE(s, len)                                                            \
+    ((len >= 6) &&                                                                                     \
+        (('T' == s[0] && 'H' == s[1] && 'I' == s[2] && 'S' == s[3] && ':' == s[4] && ':' == s[5])      \
+        ||                                                                                             \
+        ('t' == s[0] && 'h' == s[1] && 'i' == s[2] && 's' == s[3] && ':' == s[4] && ':' == s[5]))      \
     )
 
 #define BLITZ_WRAPPER_MAX_ARGS                  3
@@ -363,6 +364,7 @@ typedef struct _blitz_static_data {
     unsigned int tag_close_alt_len;
 } blitz_static_data;
 
+#define BLITZ_ERROR_MAX_LEN     1024
 /* template: "static" and "dynamic" parts */
 typedef struct _blitz_tpl {
     struct _blitz_static_data static_data;
@@ -384,6 +386,7 @@ typedef struct _blitz_tpl {
     struct _blitz_loop_stack_item loop_stack[BLITZ_LOOP_STACK_MAX]; 
     zval *scope_stack[BLITZ_SCOPE_STACK_MAX];
     unsigned int scope_stack_pos;
+    char *error;
 } blitz_tpl;
 
 #define BLITZ_ANALIZER_NODE_STACK_LEN    64
