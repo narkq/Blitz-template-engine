@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: php_blitz.h,v 1.18 2011/04/12 13:20:57 fisher Exp $ */
+/* $Id: php_blitz.h,v 1.20 2011/11/13 13:09:12 fisher Exp $ */
 
 #ifndef PHP_BLITZ_H
 #define PHP_BLITZ_H
@@ -60,6 +60,7 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char check_recursion;
     char *charset;
     unsigned long scope_lookup_limit;
+    char lower_case_method_names;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS
@@ -85,6 +86,7 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_ARG_TYPE_STR          4 
 #define BLITZ_ARG_TYPE_NUM          8
 #define BLITZ_ARG_TYPE_BOOL         16
+#define BLITZ_ARG_TYPE_FLOAT        32
 #define BLITZ_ARG_TYPE_EXPR_SHIFT               128
 #define BLITZ_EXPR_OPERATOR_GE                  128
 #define BLITZ_EXPR_OPERATOR_G                   129
@@ -439,7 +441,7 @@ typedef struct _blitz_analizer_ctx {
     || ((c)>=BLITZ_ISALPHA_BIG_MIN && (c)<=BLITZ_ISALPHA_BIG_MAX)              \
   )
 
-#define BLITZ_SCAN_SINGLE_QUOTED(c,p,pos,len,ok)                               \
+#define BLITZ_SCAN_SINGLE_QUOTED(c, p, pos, len, ok)                           \
     was_escaped = 0;                                                           \
     ok = 0;                                                                    \
     while(*(c)) {                                                              \
@@ -459,7 +461,7 @@ typedef struct _blitz_analizer_ctx {
     }                                                                          \
     *(p) = '\x0';
 
-#define BLITZ_SCAN_DOUBLE_QUOTED(c,p,pos,len,ok)                               \
+#define BLITZ_SCAN_DOUBLE_QUOTED(c, p, pos, len, ok)                           \
     was_escaped = 0;                                                           \
     ok = 0;                                                                    \
     while(*(c)) {                                                              \
@@ -479,16 +481,17 @@ typedef struct _blitz_analizer_ctx {
     }                                                                          \
     *(p) = '\x0';
 
-#define BLITZ_SCAN_NUMBER(c,p,pos,symb)                                        \
-    while(((symb) = *(c)) && BLITZ_IS_NUMBER(symb)) {                          \
-        *(p) = symb;                                                           \
-        ++(p);                                                                 \
-        ++(c);                                                                 \
-        ++(pos);                                                               \
-    }                                                                          \
+#define BLITZ_SCAN_NUMBER(c, p, pos, symb, has_dot)                                     \
+    while(((symb) = *(c)) && (BLITZ_IS_NUMBER(symb) || (symb == '.' && !has_dot))) {    \
+        if (symb == '.') has_dot = 1;                                                   \
+        *(p) = symb;                                                                    \
+        ++(p);                                                                          \
+        ++(c);                                                                          \
+        ++(pos);                                                                        \
+    }                                                                                   \
     *(p) = '\x0';
 
-#define BLITZ_SCAN_ALNUM(c,p,pos,symb)                                                   \
+#define BLITZ_SCAN_ALNUM(c, p, pos, symb)                                                \
     while(((symb) = *(c)) && (BLITZ_IS_NUMBER(symb) || BLITZ_IS_ALPHA(symb))) {          \
         *(p) = symb;                                                                     \
         ++(p);                                                                           \
@@ -497,7 +500,7 @@ typedef struct _blitz_analizer_ctx {
     }                                                                                    \
     *(p) = '\x0';
 
-#define BLITZ_SCAN_VAR(c,p,pos,symb,is_path)                                                       \
+#define BLITZ_SCAN_VAR(c, p, pos, symb, is_path)                                                   \
     while(((symb) = *(c)) &&                                                                       \
         (BLITZ_IS_NUMBER(symb) || BLITZ_IS_ALPHA(symb) || (symb == '.' && (is_path = 1)))) {       \
         *(p) = symb;                                                                               \
@@ -580,8 +583,12 @@ typedef struct _blitz_analizer_ctx {
     }
 
 #define BLITZ_ARG_NOT_EMPTY(a,ht,res)                                                             \
-    if ((a).type & BLITZ_ARG_TYPE_STR) {                                                          \
-        (res) = ((((a).len == 1) && ((a).name[0] != '0')) || (a).len>0) ? 1 : 0;                  \
+    if ((a).type == BLITZ_ARG_TYPE_STR) {                                                         \
+        if (((a).len == 1) && ((a).name[0] == '0')) {                                             \
+            (res) = 0;                                                                            \
+        } else {                                                                                  \
+            (res) = (a).len > 0;                                                                  \
+        }                                                                                         \
     } else if ((a).type == BLITZ_ARG_TYPE_NUM) {                                                  \
         (res) = (0 == strncmp((a).name,"0",1)) ? 0 : 1;                                           \
     } else if (((a).type == BLITZ_ARG_TYPE_VAR) && ht) {                                          \
@@ -596,11 +603,18 @@ typedef struct _blitz_analizer_ctx {
         } else {                                                                                  \
             res = 0;                                                                              \
         }                                                                                         \
-    } else if((a).type & BLITZ_ARG_TYPE_BOOL) {                                                   \
-        res = ('t' == *((a).name)) ? 1 : 0;                                                       \
+    } else if((a).type == BLITZ_ARG_TYPE_BOOL) {                                                  \
+        res = ('t' == (a).name[0]) ? 1 : 0;                                                       \
     } else {                                                                                      \
         res = 0;                                                                                  \
     }
+
+#define BLITZ_GET_ARG_ZVAL(a, ht, z)                                                              \
+    if (((a).type == BLITZ_ARG_TYPE_VAR) && ht) {                                                 \
+        if ((a).name && (a).len>0) {                                                              \
+         zend_hash_find(ht, (a).name, 1+(a).len, (void**)&z);                                     \
+       }                                                                                          \
+    }                                                                                             
 
 // switch (Z_TYPE_PP(z)) : see 10 lines upper
 // well, we cannot set non-scalar template value, but if ever...
@@ -668,7 +682,7 @@ typedef struct _blitz_analizer_ctx {
     tpl->scope_stack_pos--;                                                                       \
 
 #define BLITZ_GET_PREDEFINED_VAR(tpl, n, len, value)                                                                   \
-    if (n[0] != '_') {                                                                                                 \
+    if (len == 0 || n[0] != '_') {                                                                                     \
         value = -1;                                                                                                    \
     } else {                                                                                                           \
         unsigned int current = tpl->loop_stack[tpl->loop_stack_level].current;                                         \
