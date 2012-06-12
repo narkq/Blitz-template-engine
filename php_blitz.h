@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: php_blitz.h,v 1.21 2012/03/11 09:53:20 fisher Exp $ */
+/* $Id: php_blitz.h,v 1.22 2012/03/21 16:37:04 fisher Exp $ */
 
 #ifndef PHP_BLITZ_H
 #define PHP_BLITZ_H
@@ -277,9 +277,10 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_TMP_BUF_MAX_LEN                   1024
 #define BLITZ_CONTEXT_PATH_MAX_LEN              1024
 
+#define BLITZ_NODE_NO_NAMESPACE                 0
 #define BLITZ_NODE_THIS_NAMESPACE               1
 #define BLITZ_NODE_PHP_NAMESPACE                2
-#define BLITZ_NODE_UNKNOWN_NAMESPACE            3
+#define BLITZ_NODE_CUSTOM_NAMESPACE             3
 
 #define BLITZ_FLAG_FETCH_INDEX_BUILT            1
 #define BLITZ_FLAG_GLOBALS_IS_OTHER             2

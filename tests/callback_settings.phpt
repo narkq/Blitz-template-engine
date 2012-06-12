@@ -27,6 +27,7 @@ $T->load(
 "{{ m(); }}
 {{ this::m(); }}
 {{ Helper::m(); }}
+{{ php::m() }}
 ");
 
 $ini = array(
@@ -77,6 +78,8 @@ TEST #0
 blitz::display(): callbacks are disabled by blitz.enable_callbacks, m call was ignored, line 1, pos 1
 blitz::display(): callbacks are disabled by blitz.enable_callbacks, m call was ignored, line 2, pos 1
 blitz::display(): callbacks are disabled by blitz.enable_callbacks, helper::m call was ignored, line 3, pos 1
+blitz::display(): callbacks are disabled by blitz.enable_callbacks, m call was ignored, line 4, pos 1
+
 
 
 
@@ -84,17 +87,23 @@ TEST #1
 PHP function m() was called
 View function m() was called
 Helper function m() was called
+PHP function m() was called
 TEST #2
 blitz::display(): PHP callbacks are disabled by blitz.enable_php_callbacks, helper::m call was ignored, line 3, pos 1
+blitz::display(): PHP callbacks are disabled by blitz.enable_php_callbacks, m call was ignored, line 4, pos 1
 View function m() was called
 View function m() was called
+
 
 TEST #3
 View function m() was called
 View function m() was called
 Helper function m() was called
+PHP function m() was called
 TEST #4
 blitz::display(): PHP callbacks are disabled by blitz.enable_php_callbacks, helper::m call was ignored, line 3, pos 1
+blitz::display(): PHP callbacks are disabled by blitz.enable_php_callbacks, m call was ignored, line 4, pos 1
 View function m() was called
 View function m() was called
+
 

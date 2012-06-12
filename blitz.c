@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: blitz.c,v 1.62 2012/03/11 09:53:20 fisher Exp $ */
+/* $Id: blitz.c,v 1.65 2012/03/21 16:37:04 fisher Exp $ */
 
 #ifndef PHP_WIN32
 #include <sys/mman.h>
@@ -27,7 +27,11 @@
 #endif
 
 #include "php.h"
+
+#if PHP_API_VERSION < 20100412
 #include "safe_mode.h"
+#endif
+
 #include "php_globals.h"
 #include "php_ini.h"
 #include "ext/standard/php_standard.h"
@@ -54,7 +58,7 @@
 #include "php_blitz.h"
 
 #define BLITZ_DEBUG 0 
-#define BLITZ_VERSION_STRING "0.7.1.14-dev"
+#define BLITZ_VERSION_STRING "0.7.1.15-dev"
 
 ZEND_DECLARE_MODULE_GLOBALS(blitz)
 
@@ -1114,7 +1118,7 @@ static inline void blitz_parse_call (char *text, unsigned int len_text, blitz_no
                     shift = BLITZ_THIS_NAMESPACE_SHIFT;
                     node->namespace_code = BLITZ_NODE_THIS_NAMESPACE;
                 } else {
-                    node->namespace_code = BLITZ_NODE_UNKNOWN_NAMESPACE;
+                    node->namespace_code = BLITZ_NODE_CUSTOM_NAMESPACE;
                 }
                 if (shift) {
                     i = 0;
@@ -2680,10 +2684,8 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
 /* }}} */
 
 /* {{{ int blitz_exec_var() */
-static inline void blitz_exec_var(blitz_tpl *tpl, const char *lexem, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
+static inline void blitz_exec_var(blitz_tpl *tpl, const char *lexem, unsigned int lexem_len, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
 {
-    /* FIXME: there should be just node->lexem_len+1, but method.phpt test becomes broken. REMOVE STRLEN! */
-    unsigned int lexem_len = strlen(lexem);
     unsigned int lexem_len_p1 = lexem_len + 1;
     unsigned long buf_len = 0, new_len = 0;
     zval **zparam = NULL;
@@ -2734,10 +2736,8 @@ static inline void blitz_exec_var(blitz_tpl *tpl, const char *lexem, zval *param
 /* }}} */
 
 /* {{{ int blitz_exec_var_path() */
-static inline void blitz_exec_var_path(blitz_tpl *tpl, const char *lexem, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
+static inline void blitz_exec_var_path(blitz_tpl *tpl, const char *lexem, unsigned int lexem_len, zval *params, char **result, unsigned long *result_len, unsigned long *result_alloc_len TSRMLS_DC)
 {
-    /* FIXME: there should be just node->lexem_len+1, but method.phpt test becomes broken. REMOVE STRLEN! */
-    unsigned int lexem_len = strlen(lexem);
     unsigned long buf_len = 0, new_len = 0;
     char *p_result = *result;
     zval **elem = NULL;
@@ -3240,9 +3240,9 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
 
         if (node->lexem && !node->hidden) {
             if (node->type == BLITZ_NODE_TYPE_VAR) { 
-                blitz_exec_var(tpl, node->lexem, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
+                blitz_exec_var(tpl, node->lexem, node->lexem_len, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
             } else if (node->type == BLITZ_NODE_TYPE_VAR_PATH) {
-                blitz_exec_var_path(tpl, node->lexem, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
+                blitz_exec_var_path(tpl, node->lexem, node->lexem_len, parent_params, result, result_len, result_alloc_len TSRMLS_CC);
             } else if (BLITZ_IS_METHOD(node->type)) {
                 if (node->type == BLITZ_NODE_TYPE_CONTEXT) {
                     BLITZ_LOOP_MOVE_FORWARD(tpl);
@@ -4830,7 +4830,7 @@ PHP_MINFO_FUNCTION(blitz) /* {{{ */
     php_info_print_table_start();
     php_info_print_table_row(2, "Blitz support", "enabled");
     php_info_print_table_row(2, "Version", BLITZ_VERSION_STRING);
-    php_info_print_table_row(2, "Revision", "$Revision: 1.62 $");
+    php_info_print_table_row(2, "Revision", "$Revision: 1.65 $");
     php_info_print_table_end();
 
     DISPLAY_INI_ENTRIES();
