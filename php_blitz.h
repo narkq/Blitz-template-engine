@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: php_blitz.h,v 1.22 2012/03/21 16:37:04 fisher Exp $ */
+/* $Id: php_blitz.h,v 1.23 2012/05/05 13:51:36 fisher Exp $ */
 
 #ifndef PHP_BLITZ_H
 #define PHP_BLITZ_H
@@ -61,9 +61,9 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char remove_spaces_around_context_tags;
     char warn_context_duplicates;
     char check_recursion;
-    char *charset;
     unsigned long scope_lookup_limit;
     char lower_case_method_names;
+    char auto_escape;
 ZEND_END_MODULE_GLOBALS(blitz)
 
 #ifdef ZTS
@@ -292,6 +292,10 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_LOOP_STACK_MAX    32
 #define BLITZ_SCOPE_STACK_MAX   32
 
+#define BLITZ_ESCAPE_DEFAULT    0
+#define BLITZ_ESCAPE_NO         1
+#define BLITZ_ESCAPE_YES        2
+
 /* simple string with length */
 typedef struct {
     char *s;
@@ -326,7 +330,8 @@ typedef struct _blitz_node {
     unsigned long pos_end;
     unsigned long pos_begin_shift;
     unsigned long pos_end_shift;
-    char type;
+    unsigned char type;
+    unsigned char escape_mode;
     char hidden;
     char namespace_code;
     char lexem[BLITZ_MAX_LEXEM_LEN]; 

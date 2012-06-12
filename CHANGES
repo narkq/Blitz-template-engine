@@ -1,4 +1,17 @@
 ===================================================================================================
+0.7.1.16-devel 9 may 2012. С праздником, товарищи! Бей фашистскую сволочь.
+===================================================================================================
+This is very first release with HTML output escaping. Please note that internal html extension was 
+improved in 5.4.0 and some features don't work in prior versions - mainly, substitution of 
+disallowed unicode chars. Thus some tests should fail if you have PHP version < 5.4.0.
+
+- CHANGE: basic filters support was added: {{ $var | filter }}, only "raw" and "escape"
+    filters are supported and only for variables [#70]
+- CHANGE: automatic output filtering is enabled with blitz.auto_escape = 1, 0 by default) [#70]
+- CHANGE: blitz.charset global was removed (engine should use default PHP charset) [#70]
+- FIX: incorrect $-prefixed variables throw errors [bug#307]
+
+===================================================================================================
 0.7.1.15-devel 21 mar 2012. С днём весеннего равноденствия!
 ===================================================================================================
 - FIX: improved performance by removing unnecessary strlen call in internal 
