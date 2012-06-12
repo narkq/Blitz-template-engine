@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: blitz.c,v 1.61 2011/12/09 13:57:07 fisher Exp $ */
+/* $Id: blitz.c,v 1.62 2012/03/11 09:53:20 fisher Exp $ */
 
 #ifndef PHP_WIN32
 #include <sys/mman.h>
@@ -54,7 +54,7 @@
 #include "php_blitz.h"
 
 #define BLITZ_DEBUG 0 
-#define BLITZ_VERSION_STRING "0.7.1.13-dev"
+#define BLITZ_VERSION_STRING "0.7.1.14-dev"
 
 ZEND_DECLARE_MODULE_GLOBALS(blitz)
 
@@ -158,8 +158,6 @@ PHP_INI_BEGIN()
         OnUpdateBool, enable_comments, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.path", "", PHP_INI_ALL,
         OnUpdateString, path, zend_blitz_globals, blitz_globals)
-    STD_PHP_INI_ENTRY("blitz.disable_include", "0", PHP_INI_ALL,
-        OnUpdateBool, disable_include, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.remove_spaces_around_context_tags", "1", PHP_INI_ALL,
         OnUpdateBool, remove_spaces_around_context_tags, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.warn_context_duplicates", "0", PHP_INI_ALL,
@@ -172,6 +170,14 @@ PHP_INI_BEGIN()
         OnUpdateLongLegacy, scope_lookup_limit, zend_blitz_globals, blitz_globals)
     STD_PHP_INI_ENTRY("blitz.lower_case_method_names", "1", PHP_INI_ALL,
         OnUpdateBool, lower_case_method_names, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.enable_include", "1", PHP_INI_ALL,
+        OnUpdateBool, enable_include, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.enable_callbacks", "1", PHP_INI_ALL,
+        OnUpdateBool, enable_callbacks, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.enable_php_callbacks", "1", PHP_INI_ALL,
+        OnUpdateBool, enable_php_callbacks, zend_blitz_globals, blitz_globals)
+    STD_PHP_INI_ENTRY("blitz.php_callbacks_first", "1", PHP_INI_ALL,
+        OnUpdateBool, php_callbacks_first, zend_blitz_globals, blitz_globals)
 
 PHP_INI_END()
 /* }}} */
@@ -622,7 +628,10 @@ static void php_blitz_init_globals(zend_blitz_globals *blitz_globals) /* {{{ */
     blitz_globals->tag_close_alt = BLITZ_TAG_CLOSE_ALT;
     blitz_globals->enable_alternative_tags = 1;
     blitz_globals->enable_comments = 0;
-    blitz_globals->disable_include = 0;
+    blitz_globals->enable_include = 1;
+    blitz_globals->enable_callbacks = 1;
+    blitz_globals->enable_php_callbacks = 1;
+    blitz_globals->php_callbacks_first = 1;
     blitz_globals->path = "";
     blitz_globals->remove_spaces_around_context_tags = 1;
     blitz_globals->warn_context_duplicates = 0;
@@ -2367,8 +2376,8 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
             if (is_var || is_var_path) { /* argument is variable  */
                 if (is_var &&
                     (
-                        (iteration_params && SUCCESS == zend_hash_find(Z_ARRVAL_P(iteration_params),arg->name,1+arg->len,(void**)&z))
-                        || (SUCCESS == zend_hash_find(tpl->hash_globals,arg->name,1+arg->len,(void**)&z))
+                        (iteration_params && SUCCESS == zend_hash_find(Z_ARRVAL_P(iteration_params), arg->name, 1 + arg->len, (void**)&z))
+                        || (SUCCESS == zend_hash_find(tpl->hash_globals, arg->name, 1 + arg->len, (void**)&z))
                     ))
                 {
                     is_found = 1;
@@ -2382,16 +2391,16 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
                 if (is_found) {
                     convert_to_string_ex(z);
                     buf_len = Z_STRLEN_PP(z);
-                    BLITZ_REALLOC_RESULT(buf_len,new_len,*result_len,*result_alloc_len,*result,*p_result);
-                    *p_result = (char*)memcpy(*p_result,Z_STRVAL_PP(z),buf_len);
+                    BLITZ_REALLOC_RESULT(buf_len, new_len, *result_len, *result_alloc_len, *result, *p_result);
+                    *p_result = (char*)memcpy(*p_result, Z_STRVAL_PP(z), buf_len);
                     *result_len += buf_len;
                     p_result+=*result_len;
                     (*result)[*result_len] = '\0';
                 }
             } else { /* argument is string or number */
                 buf_len = (unsigned long)arg->len;
-                BLITZ_REALLOC_RESULT(buf_len,new_len,*result_len,*result_alloc_len,*result,*p_result);
-                *p_result = (char*)memcpy(*p_result,node->args[i_arg].name,buf_len);
+                BLITZ_REALLOC_RESULT(buf_len, new_len, *result_len, *result_alloc_len, *result, *p_result);
+                *p_result = (char*)memcpy(*p_result, node->args[i_arg].name, buf_len);
                 *result_len += buf_len;
                 p_result+=*result_len;
                 (*result)[*result_len] = '\0';
@@ -2407,8 +2416,12 @@ static inline int blitz_exec_predefined_method(blitz_tpl *tpl, blitz_node *node,
         blitz_tpl *itpl = NULL;
         int res = 0, found = 0;
 
-        if (BLITZ_G(disable_include)) {
-            php_error_docref(NULL TSRMLS_CC, E_WARNING, "disable_include restriction in effect: include() ignored");
+        if (!BLITZ_G(enable_include)) {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING, 
+                "includes are disabled by blitz.enable_include, line %lu, pos %lu", 
+                get_line_number(tpl->static_data.body, node->pos_begin),
+                get_line_pos(tpl->static_data.body, node->pos_begin)
+            );
             return 0;
         }
 
@@ -2591,16 +2604,44 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
     old_caller_iteration = tpl_caller->caller_iteration;
     tpl_caller->caller_iteration = iteration_params;
 
-    // class method or external (PHP/plugin) function?
+    /*
+        CALLBACK SETTINGS:
+            * enable_callbacks - all callbacks, PHP and object methods, checked externally
+            * enable_php_callbacks - just PHP callbacks
+            * php_callbacks_first - PHP callbacks have high priority in cases when it's unclear
+              if it's PHP callback or template object callback
+        CALLBACK PRIORITIES:
+            * Call object method if it's a this::call(). 
+            * Call PHP method if it's any other namespace::call() and PHP calls are enabled.
+            * If PHP-calls are enabled and have highest priority - call PHP method and then object method.
+              Otherwise, call object method and then PHP if PHP cals are enabled.
+    */
+
     function_table = &Z_OBJCE_P(obj)->function_table;
     if (node->namespace_code == BLITZ_NODE_THIS_NAMESPACE) {
         method_res = call_user_function_ex(function_table, &obj, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
     } else if (node->namespace_code) {
-        method_res = call_user_function_ex(NULL, NULL, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+        if (BLITZ_G(enable_php_callbacks)) {
+            method_res = call_user_function_ex(NULL, NULL, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+        } else {
+            php_error_docref(NULL TSRMLS_CC, E_WARNING,
+                "PHP callbacks are disabled by blitz.enable_php_callbacks, %s call was ignored, line %lu, pos %lu",
+                node->lexem,
+                get_line_number(tpl->static_data.body, node->pos_begin),
+                get_line_pos(tpl->static_data.body, node->pos_begin)
+            );
+        }
     } else {
-        method_res = call_user_function_ex(NULL, NULL, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
-        if (method_res == FAILURE) {
+        if (BLITZ_G(php_callbacks_first) && BLITZ_G(enable_php_callbacks)) {
+            method_res = call_user_function_ex(NULL, NULL, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+            if (method_res == FAILURE) {
+                method_res = call_user_function_ex(function_table, &obj, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+            }
+        } else {
             method_res = call_user_function_ex(function_table, &obj, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+            if (method_res == FAILURE && BLITZ_G(enable_php_callbacks)) {
+                method_res = call_user_function_ex(NULL, NULL, zmethod, &retval, node->n_args, args, 1, NULL TSRMLS_CC);
+            }
         }
     }
 
@@ -2834,9 +2875,11 @@ static inline void blitz_extract_var (
 
     if (*l == -1) {
         if (a->type == BLITZ_ARG_TYPE_VAR) {
-            if (SUCCESS != zend_hash_find(Z_ARRVAL_P(params), a->name, a->len + 1, (void**)z)) {
-                if (BLITZ_G(scope_lookup_limit) && tpl->scope_stack_pos) {
-                    blitz_scope_stack_find(tpl, a->name, a->len + 1, z TSRMLS_CC);
+            if (SUCCESS != zend_hash_find(tpl->hash_globals, a->name, a->len + 1, (void**)z)) {
+                if (SUCCESS != zend_hash_find(Z_ARRVAL_P(params), a->name, a->len + 1, (void**)z)) {
+                    if (BLITZ_G(scope_lookup_limit) && tpl->scope_stack_pos) {
+                        blitz_scope_stack_find(tpl, a->name, a->len + 1, z TSRMLS_CC);
+                    }
                 }
             }
         } else if (a->type == BLITZ_ARG_TYPE_VAR_PATH) {
@@ -2885,6 +2928,8 @@ static inline void blitz_check_arg (
             }
         } else if (arg->type == BLITZ_ARG_TYPE_BOOL) {
             *not_empty = (arg->name[0] == 't');
+        } else {
+            BLITZ_ARG_NOT_EMPTY(*arg, NULL, *not_empty);
         }
 
         if (*not_empty == -1) // "unknown" is equal to "empty"
@@ -2894,10 +2939,11 @@ static inline void blitz_check_arg (
 /* }}} */
 
 #define BLITZ_PHP_TYPE_MAX IS_CONSTANT_ARRAY
-#define BLITZ_COMPARE_UNKNOWN   0
-#define BLITZ_COMPARE_LONG      1
-#define BLITZ_COMPARE_DOUBLE    2
-#define BLITZ_COMPARE_STRING    3
+#define BLITZ_COMPARE_UNKNOWN       0
+#define BLITZ_COMPARE_UNDEFINED_VAR 1
+#define BLITZ_COMPARE_LONG          2
+#define BLITZ_COMPARE_DOUBLE        3
+#define BLITZ_COMPARE_STRING        4
 
 #define BLITZ_CAST_ARG_BOOL         10
 #define BLITZ_CAST_ARG_LONG         11
@@ -2959,6 +3005,9 @@ static inline void blitz_check_expr (
     a[0] = &node->args[0];
     a[1] = &node->args[2];
 
+    if (BLITZ_DEBUG)
+        php_printf("*** FUNCTION *** blitz_check_expr\n");
+
     for (i = 0; i < 2; i++) {
         c = BLITZ_COMPARE_UNKNOWN;
         arg = a[i];
@@ -2978,6 +3027,8 @@ static inline void blitz_check_expr (
                 } else if ((c == IS_LONG) || (c == IS_BOOL) || (c == IS_DOUBLE)) {
                     c = BLITZ_COMPARE_DOUBLE;                
                 }
+            } else {
+                c = BLITZ_COMPARE_UNDEFINED_VAR;
             }
         } else if (arg->type == BLITZ_ARG_TYPE_BOOL) {
             c = BLITZ_CAST_ARG_BOOL;
@@ -2988,11 +3039,19 @@ static inline void blitz_check_expr (
         } else if (arg->type == BLITZ_ARG_TYPE_STR) {
             c = BLITZ_COMPARE_STRING;
         }
+        if (BLITZ_DEBUG) 
+            php_printf("type#%u = %u\n", i, c);
+
         t[i] = c;
     }
 
     if ((t[0] == BLITZ_COMPARE_UNKNOWN) || (t[1] == BLITZ_COMPARE_UNKNOWN)) {
-        *is_true = -1;
+        *is_true = - 1;
+    } else if ((t[0] == BLITZ_COMPARE_UNDEFINED_VAR) || (t[1] == BLITZ_COMPARE_UNDEFINED_VAR)) {
+        switch (expr_arg->type) {
+            case BLITZ_EXPR_OPERATOR_E: *is_true = 0; break;
+            default: *is_true = 0;
+        }
     } else {
         if ((t[0] == BLITZ_COMPARE_STRING) && (t[1] == BLITZ_COMPARE_STRING)) {
             BLITZ_DO_CAST_TO_STRING(s1, l1, z[0], a[0]);
@@ -3068,6 +3127,7 @@ static void blitz_exec_if_context(
         if (node->type == BLITZ_NODE_TYPE_ELSE_CONTEXT) {
             condition = 1;
         } else { 
+
             if (node->n_args == 3) {
                 blitz_check_expr(tpl, node, parent_params, &is_true TSRMLS_CC);
             } else {
@@ -3199,10 +3259,19 @@ static int blitz_exec_nodes(blitz_tpl *tpl, blitz_node *first_child,
                             result, &p_result, result_len, result_alloc_len, tpl->tmp_buf TSRMLS_CC
                         );
                     } else {
-                        blitz_exec_user_method(
-                            tpl, node, &iteration_params, id,
-                            result, &p_result, result_len, result_alloc_len TSRMLS_CC
-                        );
+                        if (BLITZ_G(enable_callbacks)) {
+                            blitz_exec_user_method(
+                                tpl, node, &iteration_params, id,
+                                result, &p_result, result_len, result_alloc_len TSRMLS_CC
+                            );
+                        } else {
+                            php_error_docref(NULL TSRMLS_CC, E_WARNING, 
+                                "callbacks are disabled by blitz.enable_callbacks, %s call was ignored, line %lu, pos %lu",
+                                node->lexem,
+                                get_line_number(tpl->static_data.body, node->pos_begin), 
+                                get_line_pos(tpl->static_data.body, node->pos_begin)
+                            );
+                        }
                     }
                 }
             }
@@ -4761,7 +4830,7 @@ PHP_MINFO_FUNCTION(blitz) /* {{{ */
     php_info_print_table_start();
     php_info_print_table_row(2, "Blitz support", "enabled");
     php_info_print_table_row(2, "Version", BLITZ_VERSION_STRING);
-    php_info_print_table_row(2, "Revision", "$Revision: 1.61 $");
+    php_info_print_table_row(2, "Revision", "$Revision: 1.62 $");
     php_info_print_table_end();
 
     DISPLAY_INI_ENTRIES();

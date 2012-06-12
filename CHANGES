@@ -1,5 +1,19 @@
 ===================================================================================================
-0.7.1.13-devel 9 dec 2011. 
+0.7.1.14-devel 11 mar 2012. 
+    С днём работника органов наркоконтроля, и днём работников геодезии и картографии!
+===================================================================================================
+- FIX: expressions didn't work properly with globals, undefined variables and constants
+- CHANGE: VERY IMPORTANT! old setting "blitz.disable_include" (0 by default) was replaced
+  by new "blitz.enable_include" (1 by default)
+- ADD: news settings were added:
+    * blitz.enable_callbacks - enables callbacks, PHP or user-defined
+    * blitz.enable_php_callbacks - enables just PHP callbacks
+    * blitz.php_callbacks_first - set highest priority to PHP callbacks when it's unclear
+      if it's PHP callback or template object callback
+- FIX: max tag content length was increased from 128 to 512 bytes
+
+===================================================================================================
+0.7.1.13-devel 9 dec 2011.
 ===================================================================================================
 - CHANGE: various fixes for expressions support in IF/ELSEIF/ELSE/ULNESS statements.
 
@@ -13,7 +27,7 @@
 ===================================================================================================
 - FIX: segfault for tricky nested includes (bug#284).
 - FIX: lowercasing for methods can be suppressed by a new variable blitz.lower_case_method_names. 
-  By default, blitz.lowec_case_method_names = 1 (bug#286).
+  By default, blitz.lower_case_method_names = 1 (bug#286).
 - FIX: if with empty agrument causes syntax error (bug#287).
 - CHANGE: new docs were added into the package.
 

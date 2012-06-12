@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id: php_blitz.h,v 1.20 2011/11/13 13:09:12 fisher Exp $ */
+/* $Id: php_blitz.h,v 1.21 2012/03/11 09:53:20 fisher Exp $ */
 
 #ifndef PHP_BLITZ_H
 #define PHP_BLITZ_H
@@ -54,7 +54,10 @@ ZEND_BEGIN_MODULE_GLOBALS(blitz)
     char enable_alternative_tags;
     char enable_comments;
     char *path;
-    char disable_include;
+    char enable_include;
+    char enable_callbacks;
+    char enable_php_callbacks;
+    char php_callbacks_first;
     char remove_spaces_around_context_tags;
     char warn_context_duplicates;
     char check_recursion;
@@ -142,7 +145,7 @@ ZEND_END_MODULE_GLOBALS(blitz)
 #define BLITZ_ANALISER_ACTION_ERROR_CURR    5
 #define BLITZ_ANALISER_ACTION_ERROR_BOTH    6
 
-#define BLITZ_MAX_LEXEM_LEN    			128
+#define BLITZ_MAX_LEXEM_LEN    			512
 #define BLITZ_INPUT_BUF_SIZE 	   		4096
 #define BLITZ_MAX_FETCH_INDEX_KEY_SIZE  1024
 #define BLITZ_ALLOC_TAGS_STEP   		16
@@ -582,7 +585,7 @@ typedef struct _blitz_analizer_ctx {
         default: res = 0; break;                                                                  \
     }
 
-#define BLITZ_ARG_NOT_EMPTY(a,ht,res)                                                             \
+#define BLITZ_ARG_NOT_EMPTY(a, ht, res)                                                           \
     if ((a).type == BLITZ_ARG_TYPE_STR) {                                                         \
         if (((a).len == 1) && ((a).name[0] == '0')) {                                             \
             (res) = 0;                                                                            \
@@ -590,11 +593,11 @@ typedef struct _blitz_analizer_ctx {
             (res) = (a).len > 0;                                                                  \
         }                                                                                         \
     } else if ((a).type == BLITZ_ARG_TYPE_NUM) {                                                  \
-        (res) = (0 == strncmp((a).name,"0",1)) ? 0 : 1;                                           \
+        (res) = (0 == strncmp((a).name, "0", 1)) ? 0 : 1;                                         \
     } else if (((a).type == BLITZ_ARG_TYPE_VAR) && ht) {                                          \
         zval **z;                                                                                 \
-        if((a).name && (a).len>0) {                                                               \
-            if (SUCCESS == zend_hash_find(ht,(a).name,1+(a).len,(void**)&z))                      \
+        if((a).name && (a).len > 0) {                                                             \
+            if (SUCCESS == zend_hash_find(ht, (a).name, 1 + (a).len, (void**)&z))                 \
             {                                                                                     \
                 BLITZ_ZVAL_NOT_EMPTY(z, res)                                                      \
             } else {                                                                              \
@@ -612,8 +615,8 @@ typedef struct _blitz_analizer_ctx {
 #define BLITZ_GET_ARG_ZVAL(a, ht, z)                                                              \
     if (((a).type == BLITZ_ARG_TYPE_VAR) && ht) {                                                 \
         if ((a).name && (a).len>0) {                                                              \
-         zend_hash_find(ht, (a).name, 1+(a).len, (void**)&z);                                     \
-       }                                                                                          \
+            zend_hash_find(ht, (a).name, 1 + (a).len, (void**)&z);                                \
+        }                                                                                         \
     }                                                                                             
 
 // switch (Z_TYPE_PP(z)) : see 10 lines upper
